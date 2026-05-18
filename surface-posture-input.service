@@ -1,0 +1,34 @@
+[Unit]
+Description=Surface Laptop Studio posture-aware input toggling (kernel inhibit)
+Documentation=file:/home/shawn/.copilot/session-state/da53974b-53ee-440d-85cb-c0e175553495/plan.md
+ConditionPathExists=/sys/devices/platform/MSHW0123:00/01:26:01:00:01/state
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/surface-posture-input
+# Fail-safe: even if the daemon crashes ungracefully, this restores
+# every Surface input device to inhibited=0 on service stop.
+ExecStopPost=/bin/sh -c 'for n in /sys/class/input/input*/name; do case "$(cat "$n" 2>/dev/null)" in "Microsoft Surface 045E:09B0"*|"Microsoft Surface 045E:09AF"*|"Microsoft Surface POS Tablet Mode Switch") printf 0 > "$(dirname "$n")/inhibited" 2>/dev/null || true ;; esac; done'
+Restart=on-failure
+RestartSec=2s
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectKernelTunables=no
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+# Needs /sys/class/input/<n>/inhibited writable.
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
